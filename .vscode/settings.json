@@ -1,0 +1,5 @@
+{
+    "python.pythonPath": "/home/amoshyc/miniconda3/envs/test/bin/python",
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": ["-S"]
+}
