@@ -92,7 +92,7 @@ class ProjectionMatrixSolver:
 
     @staticmethod
     def rmse(pred2d, true2d):
-        return np.sqrt(((pred2d - true2d) ** 2).mean())
+        return np.sqrt(((pred2d - true2d) ** 2).sum(axis=1).mean())
 
 
 if __name__ == '__main__':
