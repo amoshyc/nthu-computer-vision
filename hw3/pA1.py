@@ -50,7 +50,7 @@ history = {
     'b': []
 }
 
-for epoch in range(30):
+for epoch in range(50):
     for xs, ys in iter(loader):
         optimizer.zero_grad()
         ps = model(xs)

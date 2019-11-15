@@ -35,7 +35,7 @@ class Net(nn.Module):
         return ps
 
 
-data = Data('./assets/hw3/pA1.csv')
+data = Data('./assets/hw3/pA2.csv')
 loader = DataLoader(data, batch_size=5)
 
 device = 'cpu'

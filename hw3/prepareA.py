@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 N = 50
 xs = np.random.rand(N)
 ys = 5 * xs + 4
-noise = np.random.rand(N) * 0.05 - 0.025
+noise = (np.random.rand(N) - 0.5) * 0.1
 ys = ys + noise
 
 df = pd.DataFrame(columns=['x', 'y'])
@@ -21,7 +21,7 @@ plt.show()
 N = 50
 xs = np.random.rand(N) - 0.5
 ys = -2 * xs ** 2 + 1 * xs + 4
-noise = np.random.rand(N) * 0.05 - 0.025
+noise = (np.random.rand(N) - 0.5) * 0.1
 ys = ys + noise
 
 df = pd.DataFrame(columns=['x', 'y'])
