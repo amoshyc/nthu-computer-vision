@@ -1,6 +1,8 @@
 import pandas as pd
 from PIL import Image
 from pathlib import Path
+from datetime import datetime
+from tqdm import tqdm
 
 import torch
 from torch import nn
@@ -18,7 +20,8 @@ class Data(Dataset):
         self.img_size = img_size
 
     def __len__(self):
-        return len(self.anns)
+        # return len(self.anns)
+        return 200
 
     def __getitem__(self, idx):
         ann = self.anns[idx]
@@ -44,6 +47,7 @@ class Data(Dataset):
         ]
         lbl = torch.tensor(lbl).view(4, 2) / size
         lbl = lbl / size
+        lbl = lbl.view(-1)
 
         return img, lbl, size
 
@@ -52,7 +56,7 @@ class Net(nn.Module):
     def __init__(self):
         super().__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(3, 32, (3, 3), padding=1, stride=2),
+            nn.Conv2d(3, 32, (3, 3), padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.Conv2d(32, 64, (3, 3), padding=1),
@@ -85,18 +89,19 @@ class Net(nn.Module):
 
 
 root_dir = Path('./assets/hw3/')
-data = Data(root_dir / 'train_labels.csv', root_dir / 'train_images')
-train_set = Subset(data, range(0, 2500))
-valid_set = Subset(data, range(2500, 3000))
-train_loader = DataLoader(train_set)
-valid_loader = DataLoader(valid_set)
+data = Data(root_dir / 'train_labels.csv', root_dir / 'train_images', img_size=(72, 114))
+pivot = len(data) * 4 // 5
+train_set = Subset(data, range(0, pivot))
+valid_set = Subset(data, range(pivot, len(data)))
+train_loader = DataLoader(train_set, 10)
+valid_loader = DataLoader(valid_set, 10)
 
 device = 'cpu'
 model = Net().to(device)
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-log_dir = Path('./runs/hw3B/')
+log_dir = Path('./runs/') / f'{datetime.now():%b.%d %H:%M:%S}'
 log_dir.mkdir(parents=True, exist_ok=True)
 writer = SummaryWriter(log_dir)
 
@@ -104,16 +109,17 @@ step = 0 # global step
 for epoch in range(10):
     # Training
     model.train()
-    for img_b, lbl_b, size_b in iter(train_loader):
+    for img_b, lbl_b, size_b in tqdm(iter(train_loader)):
         optimizer.zero_grad()
         pred_b = model(img_b)
         loss = criterion(pred_b, lbl_b)
         loss.backward()
         optimizer.step()
 
-        pred_b = pred_b.detach() * size_b
-        lbl_b = lbl_b.detach() * size_b
-        mse = (pred_b - lbl_b) ** 2).sum(dim=1).mean()
+        size_b = size_b.view(-1, 1, 2)
+        pred_b = pred_b.detach().view(-1, 4, 2) * size_b
+        lbl_b = lbl_b.detach().view(-1, 4, 2) * size_b
+        mse = ((pred_b - lbl_b) ** 2).sum(dim=2).sqrt().mean()
         writer.add_scalar('loss/train', loss.detach().item(), step)
         writer.add_scalar('mse/train', mse, step)
         step += 1
@@ -121,12 +127,13 @@ for epoch in range(10):
     # Validation
     model.eval()
     with torch.no_grad():
-        for img_b, lbl_b, size_b in iter(valid_loader):
+        for img_b, lbl_b, size_b in tqdm(iter(valid_loader)):
             pred_b = model(img_b)
             loss = criterion(pred_b, lbl_b)
-            pred_b = pred_b * size_b
-            lbl_b = lbl_b* size_b
-            mse = (pred_b - lbl_b) ** 2).sum(dim=1).mean()
+            size_b = size_b.view(-1, 1, 2)
+            pred_b = pred_b.detach().view(-1, 4, 2) * size_b
+            lbl_b = lbl_b.detach().view(-1, 4, 2) * size_b
+            mse = ((pred_b - lbl_b) ** 2).sum(dim=2).sqrt().mean()
             writer.add_scalar('loss/valid', loss.item(), step)
             writer.add_scalar('mse/valid', mse, step)
 
